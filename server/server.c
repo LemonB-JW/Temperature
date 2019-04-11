@@ -19,7 +19,7 @@
 char* msg;
 extern void* arduino_receive(void*);
 extern int arduino_init();
-extern void arduino_send();
+extern void arduino_send(void*);
 extern int fd;
 
 int start_server(int PORT_NUMBER)
