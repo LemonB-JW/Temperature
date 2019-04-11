@@ -12,11 +12,12 @@ $("#update").click(updateCurr);
 
 function updateCurr(){
   //update example.jason to actually request "http://localhost:3001/temp"
-  $.getJSON('example.json', function(data){
+  $.getJSON('http://localhost:3001/T', function(data){
     curr = data.curr;
-    highest = data.highest;
-    lowest = data.lowest;
-    average = data.average;
+    console.log(curr);
+    // highest = data.highest;
+    // lowest = data.lowest;
+    // average = data.average;
     updateDisplay()
   })
 }
@@ -39,10 +40,11 @@ function sendScale(){
 
 //helper function to update temperature display
 function updateDisplay(){
+  console.log(curr);
   $("#curr").html(curr);
-  $("#highest").html(highest);
-  $("#lowest").html(lowest);
-  $("#average").html(average);
+  // $("#highest").html(highest);
+  // $("#lowest").html(lowest);
+  // $("#average").html(average);
 }
 
 function setT(){
