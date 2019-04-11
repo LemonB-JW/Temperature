@@ -1,5 +1,5 @@
 ///*
-//This code primarily comes from 
+//This code primarily comes from
 //http://www.prasannatech.net/2008/07/socket-programming-tutorial.html
 //and
 //http://www.binarii.com/files/papers/c_sockets.txt
@@ -26,67 +26,95 @@ int start_server(int PORT_NUMBER)
 {
 
       // structs to represent the server and client
-      struct sockaddr_in server_addr,client_addr;    
-      
+      struct sockaddr_in server_addr,client_addr;
+
       int sock; // socket descriptor
 
       // 1. socket: creates a socket descriptor that you later use to make other system calls
       if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-	perror("Socket");
-	exit(1);
+          perror("Socket");
+          exit(1);
       }
       int temp;
       if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&temp,sizeof(int)) == -1) {
-	perror("Setsockopt");
-	exit(1);
+          perror("Setsockopt");
+          exit(1);
       }
 
       // configure the server
       server_addr.sin_port = htons(PORT_NUMBER); // specify port number
-      server_addr.sin_family = AF_INET;         
-      server_addr.sin_addr.s_addr = INADDR_ANY; 
-      bzero(&(server_addr.sin_zero),8); 
-      
+      server_addr.sin_family = AF_INET;
+      server_addr.sin_addr.s_addr = INADDR_ANY;
+      bzero(&(server_addr.sin_zero),8);
+
       // 2. bind: use the socket and associate it with the port number
       if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
-	perror("Unable to bind");
-	exit(1);
+          perror("Unable to bind");
+          exit(1);
       }
 
       // 3. listen: indicates that we want to listen to the port to which we bound; second arg is number of allowed connections
       if (listen(sock, 1) == -1) {
-	perror("Listen");
-	exit(1);
+          perror("Listen");
+          exit(1);
       }
-          
+
       // once you get here, the server is set up and about to start listening
       printf("\nServer configured to listen on port %d\n", PORT_NUMBER);
       fflush(stdout);
-    
-
-    arduino_init();
-    pthread_t arduino;
-    pthread_create(&arduino, NULL, &arduino_receive, NULL);
-    
-    int sin_size = sizeof(struct sockaddr_in);
 
 
-    while (1) {
+      arduino_init();
+      pthread_t arduino;
+      pthread_create(&arduino, NULL, &arduino_receive, NULL);
+
+      int sin_size = sizeof(struct sockaddr_in);
+
+
+      while (1) {
         // 4. accept: wait here until we get a connection on that port
         // Select
-        int fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
-        if (fd != -1) {
-          printf("Server got a connection from (%s, %d)\n", inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
-            
+          int fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
+          if (fd != -1) {
+              printf("Server got a connection from (%s, %d)\n", inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
+
           // buffer to read data into
           char request[1024];
-            
+
           // 5. recv: read incoming message (request) into buffer
           int bytes_received = recv(fd,request,1024,0);
           // null-terminate the string
           request[bytes_received] = '\0';
           // print it to standard out
           printf("This is the incoming request:\n%s\n", request);
+
+          // Process request from client
+          char mark = request[5];
+          if(mark == 'F') {
+              printf("ToFah\n");
+              arduino_send("F");
+          } else {
+              char high_temp[5];
+              char low_temp[5];
+              high_temp[0] = request[5];
+              high_temp[1] = request[6];
+              high_temp[2] = '\0';
+              char* high_signal = malloc(sizeof(char)*6);
+              strcat(high_signal, "H:");
+              strcat(high_signal, high_temp);
+              low_temp[0] = request[8];
+              low_temp[1] = request[9];
+              low_temp[2] = '\0';
+              char* low_signal = malloc(sizeof(char)*6);
+              strcat(low_signal, "L:");
+              strcat(low_signal, low_temp);
+              printf("%s %s\n", high_signal, low_signal);
+
+              arduino_send(high_signal);
+              arduino_send(low_signal);
+              free(high_signal);
+              free(low_signal);
+          }
 
           char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><p>";
           char *reply_tail = "</p></html>";
@@ -95,29 +123,23 @@ int start_server(int PORT_NUMBER)
           char *reply = malloc(sizeof(char)*strlen(reply_head) + 1);
           strcpy(reply, reply_head);
 //        printf("%s\n", reply);
-        
+
         // 6. send: send the outgoing message (response) over the socket
-	// note that the second argument is a char*, and the third is the number of chars	
+	// note that the second argument is a char*, and the third is the number of chars
           send(fd, reply, strlen(reply), 0);
             // 7. close: close the connectionu
-            close(fd);
-            printf("Server closed connection\n");
-            free(reply);
+          close(fd);
+          printf("Server closed connection\n");
+          free(reply);
         }
-
     }
-	
-
-
     pthread_join(arduino, NULL);
-
-
       // 8. close: close the socket
-      close(sock);
-      printf("Server shutting down\n");
-  
-      return 0;
-} 
+    close(sock);
+    printf("Server shutting down\n");
+
+    return 0;
+}
 
 
 
@@ -137,4 +159,3 @@ int main(int argc, char *argv[])
 
   start_server(port_number);
 }
-

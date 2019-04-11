@@ -1,0 +1,54 @@
+<html>
+<head>
+<script src="jquery.js"></script>
+
+<style>
+button {
+font-size: 14px;
+width: 100px;
+}
+
+input {
+font-size: 14px;
+height: 40px;
+text-align: right;
+}
+
+</style>
+</head>
+
+<body>
+
+<div>
+  Select scales: <br>
+  <button class = "scale" id = "celsius" value = "c"> Celsius </button>
+  <button class = "scale" id = "farenheit" value = "f">Farenheit </button>
+  <p>
+  Click to update current temerature is
+  <button id = "update"> Update </button> <br><br>
+  <span id = "curr"><b>loading...</b></span><br><br>
+  <b>In the past hour:</b> <br>
+  Highest: <span id = "highest"> loading... </span><br>
+  Lowest: <span id = "lowest"> loading... </span><br>
+  Average: <span id = "average"> loading... </span><br>
+  </p>
+</div>
+
+<div>
+  High Threhold <br>
+  <input class = "threhold" name = "ht" id = "ht"></input></td><br><br>
+  Low Threhold <br>
+  <input class = "threhold" name = "lt" id = "lt"></input></td><br><br>
+  <button id = "setThrehold"> Set Threhold </button>
+</div>
+
+<span id='message'>warning messages goes here</span>
+
+<script src="browser.js"></script>
+
+
+</body>
+
+
+
+</html>

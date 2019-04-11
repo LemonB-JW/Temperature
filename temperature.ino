@@ -127,10 +127,6 @@ void loop()
     Serial.println(Threshold_L, DEC);
 
     String msg = Serial.readString();
-    
-//    while (Serial.available() > 0) {
-//        Serial.read();
-//    }
     char buf[20];
     msg.toCharArray(buf, 20);
 // "H:35"  "L:10"
@@ -145,7 +141,7 @@ void loop()
         strtok(buf, ":");
         String temp = strtok(NULL, ":");
         Threshold_L = temp.toInt();
-    } else if (msg.equals("T")) {
+    } else if (msg.equals("F")) {
       // Change temperature display to the opposite one
       isCel = !isCel;
     }
