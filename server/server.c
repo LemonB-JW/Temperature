@@ -21,6 +21,7 @@ extern void* arduino_receive(void*);
 extern int arduino_init();
 extern void arduino_send(void*);
 extern int fd;
+extern arduino_status;
 
 int start_server(int PORT_NUMBER)
 {
@@ -87,16 +88,26 @@ int start_server(int PORT_NUMBER)
           request[bytes_received] = '\0';
           // print it to standard out
           printf("This is the incoming request:\n%s\n", request);
-
+          
+          char* reply;
+  
           // Process request from client
           char mark = request[5];
           if (mark == 'T') {
+            // Check if arduino is connected
+            if (arduino_status == 1) {
+              char* error = "Arduino is currently disconnected!";  //TODO: html or something else
+              reply = malloc(sizeof(char) * (strlen(error) + 1));
+              strcpy(reply, error);
+              send(fd, reply, strlen(reply), 0);
+              continue;
+            }
             printf("Dispay: ");
             char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
             char *reply_tail = "{\"curr\":30}";
             // strcat(reply_head, msg);
             strcat(reply_head, reply_tail);
-            char *reply = malloc(sizeof(char)*strlen(reply_head) + 1);
+            reply = malloc(sizeof(char)*strlen(reply_head) + 1);
             strcpy(reply, reply_head);
             printf("%s\n", reply);
             // 6. send: send the outgoing message (response) over the socket
@@ -139,7 +150,7 @@ int start_server(int PORT_NUMBER)
 //        printf("%s\n", reply);
 
 
-            // 7. close: close the connectionu
+          // 7. close: close the connectionu
           close(fd);
           printf("Server closed connection\n");
         }

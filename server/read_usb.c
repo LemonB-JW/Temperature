@@ -9,10 +9,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 
 int fd;
 char* msg;
 pthread_mutex_t fd_lock;
+int arduino_status;  // 0 if Arduino connected, 1 if disconnected
 /*
 This code configures the file descriptor for use as a serial port.
 */
@@ -55,6 +57,7 @@ int arduino_init() {
 
     if (fd < 0) {
         perror("Could not open file\n");
+        arduino_status = 1;   // disconnected
         exit(1);
     }
     else {
@@ -86,6 +89,7 @@ void* arduino_receive(void* arg) {
     msg = malloc(100*sizeof(char));
     // "\n\n"
     int hit_n = 0;
+    clock_t last_time;
 
     while(1) {
         int i = 0;
@@ -94,9 +98,17 @@ void* arduino_receive(void* arg) {
             pthread_mutex_lock(&fd_lock);
             bytes_read = read(fd, &buf, 1);
             pthread_mutex_unlock(&fd_lock);
+            
             if (bytes_read <= 0) {
-                continue;
+                // Check if Arduino is Connected
+                if (((double)(clock() - last_time) / CLOCKS_PER_SEC) > 3 && arduino_init() == 0) {
+                    arduino_status = 1;    // Mark disconnected
+                } else {
+                    continue;
+                }
             }
+            // If we receive message from Arduino successfully, we record the current time
+            last_time = clock();
             if (buf == '\n') {
                 if (hit_n == 0) {
                     hit_n = 1;
