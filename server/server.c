@@ -91,12 +91,14 @@ int start_server(int PORT_NUMBER)
           // Process request from client
           char mark = request[5];
           if (mark == 'T') {
+            printf("Dispay: ");
             char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
             char *reply_tail = "{\"curr\":30}";
             // strcat(reply_head, msg);
             strcat(reply_head, reply_tail);
             char *reply = malloc(sizeof(char)*strlen(reply_head) + 1);
             strcpy(reply, reply_head);
+            printf("%s\n", reply);
             // 6. send: send the outgoing message (response) over the socket
       // note that the second argument is a char*, and the third is the number of chars
             send(fd, reply, strlen(reply), 0);
@@ -104,6 +106,12 @@ int start_server(int PORT_NUMBER)
           } else if(mark == 'F') {
               printf("ToFah\n");
               arduino_send("F");
+          } else if (mark == 'S') {   // change stand by mode
+              printf("Stand_by mode change\n");
+              arduino_send("S");
+          } else if (mark == 'X'){
+              printf("CIS\n");     // Tell arduino to display "CIS"
+              arduino_send("X");
           } else {
               char high_temp[5];
               char low_temp[5];

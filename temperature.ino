@@ -39,7 +39,9 @@ const byte NumberLookup[16] =   {0x3F,0x06,0x5B,0x4F,0x66,
 String msg = "";    // To receive message from server
 int Threshold_U = 33;    /* Hot temperature, drive red LED (30c) */
 int Threshold_L = 10;
-bool isCel = true;    /*boolean value to indicate whether to show temperature in Celcius or Fahrenheit, true to show Celcius, otherwise show Fah*/
+bool isCel = true;    /* boolean value to indicate whether to show temperature in Celcius or Fahrenheit, true to show Celcius, otherwise show Fah*/
+bool stand_by = false; /* boolean value to indicate whether to be stand by mode */
+bool cis = false;
 
 /* Function prototypes */
 void Cal_temp (int&, byte&, byte&, bool&);
@@ -141,9 +143,15 @@ void loop()
         strtok(buf, ":");
         String temp = strtok(NULL, ":");
         Threshold_L = temp.toInt();
-    } else if (msg.equals("F")) {
+    } else if (msg.equals("F") || msg.eauals("C")) {
       // Change temperature display to the opposite one
       isCel = !isCel;
+    } else if (msg.equals("S")) {
+      // Convert stand_by mode
+      stand_by = !stand_by; 
+    } else if (msg.equals("X")) {
+      // Convert display to "cis"
+      cis = !cis;
     }
     msg = "";
     
@@ -164,12 +172,25 @@ void loop()
        Comment out this line if you don't use serial monitor.*/
     SerialMonitorPrint (Temperature_H, Decimal, IsPositive, Threshold_U);
     
-    /* Update RGB LED.*/
-    UpdateRGB (Temperature_H);
+    if (!stand_by && !cis) {
+      /* Update RGB LED.*/
+      UpdateRGB (Temperature_H);
     
-    /* Display temperature on the 7-Segment */
-    Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
-    
+      /* Display temperature on the 7-Segment */
+      Dis_7SEG (Decimal, Temperature_H, Temperature_L, IsPositive);
+    } else if (!cis){
+      /* Display nothing */
+      Send7SEG (4,0x00);    
+      Send7SEG (3,0x00);   
+      Send7SEG (2,0x00);   
+      Send7SEG (1,0x00);   
+    } else {
+      /* Display " CIS" */
+      Send7SEG (4,0x00);
+      Send7SEG (3,0x71);
+      Send7SEG (2,0x06);
+      Send7SEG (1,0x6D);  
+    }  
     delay (1000);        /* Take temperature read every 1 second */
   }
 } 
