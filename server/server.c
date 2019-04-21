@@ -17,6 +17,11 @@
 #include <pthread.h>
 #include "arduino.h"
 
+struct req_info{
+  char* request;
+  int fd;
+};
+
 char* msg;
 // extern void* arduino_receive(void*);
 // extern int arduino_init();
@@ -24,21 +29,54 @@ char* msg;
 // extern int fd;
 // extern arduino_status;
 
+int send_js(char* filename, int fd){
+  char* path = malloc(sizeof(char)*100);
+  sprintf(path, "../script/%s.js", filename);
+  FILE * file = fopen(path, "r");
+  if (file == NULL) {
+    perror("js file not opened!");
+    exit(1);
+  }  //get the file size
+  fseek(file, 0L, SEEK_END);
+  int sz = ftell(file);
+  fseek(file, 0L, SEEK_SET);
+
+  char * reply = malloc(sizeof(char) * (sz + 100));
+  char * starter = "HTTP/1.1 200 OK\nContent-Type: applicaion/javascript\n\n";
+  strcpy(reply, starter);
+  char * line = malloc(sizeof(char)*200);
+  while (fgets(line, 200, file) != NULL){
+    strcat(reply, line);
+  }
+  send(fd, reply, strlen(reply), 0);
+  free(line);
+  fclose(file);
+
+  return 0;
+}
+
 /* start new thread when new request coming */
-void* recv_request(void* req) {
-  char* request = malloc(sizeof(char) * (strlen((char*)req) + 1));   // TODO: malloc?
-  strcpy(request, (char*)req);
-  // null-terminate the string
-  request[bytes_received] = '\0';
+void* recv_request(void *new_req) {
+  struct req_info * req = (struct req_info *)new_req;
+  char* request = malloc(sizeof(char) * (strlen(req->request) + 1));   // TODO: malloc?
+  strcpy(request, req->request);
   // print it to standard out
-  printf("This is the incoming request:\n%s\n", request);
+  printf("This is the incoming request:\n%s\n", req->request);
 
   char* reply;
   // Process request from client
   char mark = request[5];
+  printf("token:%c\n", mark);
   //send html back
   if(mark == ' '){
+    printf("Reques:Refresh!\n");
     FILE * html = fopen("../script/browser.html", "r");
+    if (html == NULL) {
+      printf("html file not open!");
+      exit(1);
+    } else {
+      printf("html file opened successfully!");
+    }
     //get the file size
     fseek(html, 0L, SEEK_END);
     int sz = ftell(html);
@@ -51,9 +89,22 @@ void* recv_request(void* req) {
     while (fgets(line, 200, html) != NULL){
       strcat(reply, line);
     }
-    send(fd, reply, strlen(reply), 0);
+    printf("Reply: %s\n", reply);
+    printf("fd: %d\n", req->fd);
+    int status = send(req->fd, reply, strlen(reply), 0);
+    if (status < 0) {
+      printf("send response failed: %s\n", strerror(errno));
+    }
     free(line);
     fclose(html);
+  } else if (mark == 'b') {
+    char* token = strtok(request, " ");
+    token = strtok(NULL, " ");
+    printf("%s", token);
+    if (strcmp("/browser.js", token) == 0) {
+      send_js("browser", req->fd);
+
+    }
   } else if (mark == 'T') {
     // Check if arduino is connected
     if (arduino_status == 1) {
@@ -61,7 +112,7 @@ void* recv_request(void* req) {
       reply = malloc(sizeof(char) * (strlen(error) + 1));
       strcpy(reply, error);
       send(fd, reply, strlen(reply), 0);
-      continue;
+      exit(1);
     }
     printf("Dispay: ");
     char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
@@ -73,7 +124,7 @@ void* recv_request(void* req) {
     printf("%s\n", reply);
     // 6. send: send the outgoing message (response) over the socket
 // note that the second argument is a char*, and the third is the number of chars
-    send(fd, reply, strlen(reply), 0);
+    send(req->fd, reply, strlen(reply), 0);
     free(reply);
   } else if(mark == 'F') {
       printf("ToFah\n");
@@ -107,6 +158,7 @@ void* recv_request(void* req) {
       free(low_signal);
   }
   free(request);
+  return NULL;
 //        printf("%s\n", reply);
 }
 
@@ -168,21 +220,27 @@ int start_server(int PORT_NUMBER)
           int fd = accept(sock, (struct sockaddr *)&client_addr,(socklen_t *)&sin_size);
           if (fd != -1) {
               printf("Server got a connection from (%s, %d)\n", inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
-
+          struct req_info req;
+          req.fd = fd;
+          printf("fd: %d\n", req.fd);
           // buffer to read data into
           char request[1024];
 
           // 5. recv: read incoming message (request) into buffer
           int bytes_received = recv(fd,request,1024,0);
+          // null-terminate the string
+          request[bytes_received] = '\0';
+          req.request = malloc(sizeof(char)*(strlen(request)+1));
+          strcpy(req.request, request);
 
           if (i >= 25) {
             for (int i = 0; i < 25; i++) {
               pthread_join(threads[i], NULL);
             }
           }
-          threads[i] = i++;
-          pthread_create(&threads[i], NULL, &recv_request,request);
 
+          pthread_create(&threads[i], NULL, &recv_request, &req);
+          pthread_join(threads[i++], NULL);
           // 7. close: close the connectionu
           close(fd);
           printf("Server closed connection\n");

@@ -143,7 +143,7 @@ void loop()
         strtok(buf, ":");
         String temp = strtok(NULL, ":");
         Threshold_L = temp.toInt();
-    } else if (msg.equals("F") || msg.eauals("C")) {
+    } else if (msg.equals("F") || msg.equals("C")) {
       // Change temperature display to the opposite one
       isCel = !isCel;
     } else if (msg.equals("S")) {

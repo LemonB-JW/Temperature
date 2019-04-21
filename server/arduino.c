@@ -58,7 +58,7 @@ int arduino_init() {
     if (fd < 0) {
         perror("Could not open file\n");
         arduino_status = 1;   // disconnected
-        exit(1);
+        // exit(1);
     }
     else {
         printf("Successfully opened %s for reading and writing\n", filename);
@@ -98,7 +98,7 @@ void* arduino_receive(void* arg) {
             pthread_mutex_lock(&fd_lock);
             bytes_read = read(fd, &buf, 1);
             pthread_mutex_unlock(&fd_lock);
-            
+
             if (bytes_read <= 0) {
                 // Check if Arduino is Connected
                 if (((double)(clock() - last_time) / CLOCKS_PER_SEC) > 3 && arduino_init() == 0) {
