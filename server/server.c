@@ -16,6 +16,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "arduino.h"
+#include "temp_calc.h"
 
 struct req_info{
   char* request;
@@ -68,7 +69,7 @@ void* recv_request(void *new_req) {
   char mark = request[5];
   printf("token:%c\n", mark);
   //send html back
-  if(mark == ' '){
+  if(mark == ' ' || mark == 'f'){
     printf("Reques:Refresh!\n");
     FILE * html = fopen("../script/browser.html", "r");
     if (html == NULL) {
@@ -112,11 +113,15 @@ void* recv_request(void *new_req) {
       reply = malloc(sizeof(char) * (strlen(error) + 1));
       strcpy(reply, error);
       send(fd, reply, strlen(reply), 0);
+      perror("arduino_status error");
       exit(1);
     }
+    // get temperature data
+    temperature temps = get_temp();
     printf("Dispay: ");
     char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
-    char *reply_tail = "{\"curr\":30}";
+    char *reply_tail = malloc(sizeof(char)*100);
+    sprintf(reply_tail, "{\"curr\":%f,\"highest\":%f,\"lowest\":%f,\"average\":%f}", cur_temp, temps.high, temps.low, temps.avg);
     // strcat(reply_head, msg);
     strcat(reply_head, reply_tail);
     reply = malloc(sizeof(char)*strlen(reply_head) + 1);

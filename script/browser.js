@@ -8,23 +8,25 @@ var lt = 0;
 
 $(".scale").click(selectScale);
 $("#setThrehold").click(setT);
-$("#update").click(updateCurr);
+// $("#update").click(updateCurr);
 $("#standby").click(standby);
 $("#cis").click(showCIS);
 
-
-function updateCurr(){
-  //update example.jason to actually request "http://localhost:3001/temp"
-  setInterval(function(){
-    $.getJSON('http://localhost:3001/T', function(data){
-      curr = data.curr;
-      highest = data.highest;
-      lowest = data.lowest;
-      average = data.average;
-    updateDisplay();
-  }, 5000);
+// update temperature display every 5 seconds
+setInterval(function(){
+  $.getJSON('http://localhost:3001/T', function(data){
+    // TODO: can't receive cur temp
+    curr = data.curr;
+    highest = data.highest;
+    lowest = data.lowest;
+    average = data.average;
+  updateDisplay();
   })
-}
+}, 5000);
+
+// function updateCurr(){
+//
+// }
 
 function selectScale(){
     //update display according to the scale

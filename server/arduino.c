@@ -10,9 +10,11 @@
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
+#include "temp_calc.h"
 
 int fd;
 char* msg;
+double cur_temp;
 pthread_mutex_t fd_lock;
 int arduino_status;  // 0 if Arduino connected, 1 if disconnected
 /*
@@ -42,6 +44,27 @@ void configure(int fd) {
 
 }
 
+
+double get_cur_temp(char* s) {
+    char* tmp;
+    if (s != NULL && strlen(s) > 15) {  // Temp:26 degrees C
+      tmp = strtok(s, ":");
+      tmp = strtok(NULL, " ");
+    }
+    double temp = atof(tmp);
+    if (temp != 0) {
+      int status = update_temp(temp);
+      if (status != 0) {
+        perror("update temperature failed");
+        exit(1);
+      }
+      printf("get_temp: %f\n", temp);
+      return temp;
+    }
+    return 1;  // if not return temp
+}
+
+
 int arduino_init() {
     pthread_mutex_init(&fd_lock, NULL);
     // get the name from the command line
@@ -65,8 +88,6 @@ int arduino_init() {
     }
 
     configure(fd);
-
-
 
     return 0;
 }
@@ -104,9 +125,11 @@ void* arduino_receive(void* arg) {
                 if (((double)(clock() - last_time) / CLOCKS_PER_SEC) > 3 && arduino_init() == 0) {
                     arduino_status = 1;    // Mark disconnected
                 } else {
+                    arduino_status = 0;
                     continue;
                 }
             }
+            arduino_status = 0;
             // If we receive message from Arduino successfully, we record the current time
             last_time = clock();
             if (buf == '\n') {
@@ -115,14 +138,16 @@ void* arduino_receive(void* arg) {
                     continue;
                 }
                 if (hit_n == 1) {
-                    printf("hit new line %s\n", msg);
                     hit_n = 0;
                     break;
                 }
             }
             tmp[i++] = buf;
         }
+        tmp[i] = '\0';
         strcpy(msg, tmp);
+        printf("%s\n", msg);
+        cur_temp = get_cur_temp(msg);  // extract current temperature from the input
     }
     return NULL;
 }

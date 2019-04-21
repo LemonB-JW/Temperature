@@ -124,10 +124,6 @@ void loop()
    
   while (1)
   {
-
-    Serial.println(Threshold_U, DEC);
-    Serial.println(Threshold_L, DEC);
-
     String msg = Serial.readString();
     char buf[20];
     msg.toCharArray(buf, 20);
@@ -170,7 +166,7 @@ void loop()
     
     /* Display temperature on the serial monitor. 
        Comment out this line if you don't use serial monitor.*/
-    SerialMonitorPrint (Temperature_H, Decimal, IsPositive, Threshold_U);
+    SerialMonitorPrint (Temperature_H, Decimal, IsPositive);
     
     if (!stand_by && !cis) {
       /* Update RGB LED.*/
@@ -349,9 +345,9 @@ void UpdateRGB (byte Temperature_H)
  Purpose: 
    Print current read temperature to the serial monitor.
 ****************************************************************************/
-void SerialMonitorPrint (byte Temperature_H, int Decimal, bool IsPositive, int temp)
+void SerialMonitorPrint (byte Temperature_H, int Decimal, bool IsPositive)
 {
-    Serial.print("The temperature is ");
+    Serial.print("Temp:");
     if (!IsPositive)
     {
       Serial.print("-");
@@ -360,8 +356,6 @@ void SerialMonitorPrint (byte Temperature_H, int Decimal, bool IsPositive, int t
     Serial.print(".");
     Serial.print(Decimal, DEC);
     Serial.print(" degrees C");
-    Serial.print(temp, DEC);
-    Serial.print(":");
     Serial.print("\n\n");
 }
     
