@@ -24,6 +24,76 @@ char* msg;
 // extern int fd;
 // extern arduino_status;
 
+/* start new thread when new request coming */
+void* recv_request(void* req) {
+  char* request = malloc(sizeof(char) * (strlen((char*)req) + 1));   // TODO: malloc?
+  strcpy(request, (char*)req);
+  // null-terminate the string
+  request[bytes_received] = '\0';
+  // print it to standard out
+  printf("This is the incoming request:\n%s\n", request);
+
+  char* reply;
+
+  // Process request from client
+  char mark = request[5];
+  if (mark == 'T') {
+    // Check if arduino is connected
+    if (arduino_status == 1) {
+      char* error = "Arduino is currently disconnected!";  //TODO: html or something else
+      reply = malloc(sizeof(char) * (strlen(error) + 1));
+      strcpy(reply, error);
+      send(fd, reply, strlen(reply), 0);
+      continue;
+    }
+    printf("Dispay: ");
+    char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
+    char *reply_tail = "{\"curr\":30}";
+    // strcat(reply_head, msg);
+    strcat(reply_head, reply_tail);
+    reply = malloc(sizeof(char)*strlen(reply_head) + 1);
+    strcpy(reply, reply_head);
+    printf("%s\n", reply);
+    // 6. send: send the outgoing message (response) over the socket
+// note that the second argument is a char*, and the third is the number of chars
+    send(fd, reply, strlen(reply), 0);
+    free(reply);
+  } else if(mark == 'F') {
+      printf("ToFah\n");
+      arduino_send("F");
+  } else if (mark == 'S') {   // change stand by mode
+      printf("Stand_by mode change\n");
+      arduino_send("S");
+  } else if (mark == 'X'){
+      printf("CIS\n");     // Tell arduino to display "CIS"
+      arduino_send("X");
+  } else {
+      char high_temp[5];
+      char low_temp[5];
+      high_temp[0] = request[5];
+      high_temp[1] = request[6];
+      high_temp[2] = '\0';
+      char* high_signal = malloc(sizeof(char)*6);
+      strcat(high_signal, "H:");
+      strcat(high_signal, high_temp);
+      low_temp[0] = request[8];
+      low_temp[1] = request[9];
+      low_temp[2] = '\0';
+      char* low_signal = malloc(sizeof(char)*6);
+      strcat(low_signal, "L:");
+      strcat(low_signal, low_temp);
+      printf("%s %s\n", high_signal, low_signal);
+
+      arduino_send(high_signal);
+      arduino_send(low_signal);
+      free(high_signal);
+      free(low_signal);
+  }
+  free(request);
+//        printf("%s\n", reply);
+}
+
+
 int start_server(int PORT_NUMBER)
 {
 
@@ -72,6 +142,8 @@ int start_server(int PORT_NUMBER)
 
       int sin_size = sizeof(struct sockaddr_in);
 
+      pthread_t threads[25];
+      int i = 0;
 
       while (1) {
         // 4. accept: wait here until we get a connection on that port
@@ -85,70 +157,14 @@ int start_server(int PORT_NUMBER)
 
           // 5. recv: read incoming message (request) into buffer
           int bytes_received = recv(fd,request,1024,0);
-          // null-terminate the string
-          request[bytes_received] = '\0';
-          // print it to standard out
-          printf("This is the incoming request:\n%s\n", request);
 
-          char* reply;
-
-          // Process request from client
-          char mark = request[5];
-          if (mark == 'T') {
-            // Check if arduino is connected
-            if (arduino_status == 1) {
-              char* error = "Arduino is currently disconnected!";  //TODO: html or something else
-              reply = malloc(sizeof(char) * (strlen(error) + 1));
-              strcpy(reply, error);
-              send(fd, reply, strlen(reply), 0);
-              continue;
+          if (i >= 25) {
+            for (int i = 0; i < 25; i++) {
+              pthread_join(threads[i], NULL);
             }
-            printf("Dispay: ");
-            char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
-            char *reply_tail = "{\"curr\":30}";
-            // strcat(reply_head, msg);
-            strcat(reply_head, reply_tail);
-            reply = malloc(sizeof(char)*strlen(reply_head) + 1);
-            strcpy(reply, reply_head);
-            printf("%s\n", reply);
-            // 6. send: send the outgoing message (response) over the socket
-      // note that the second argument is a char*, and the third is the number of chars
-            send(fd, reply, strlen(reply), 0);
-            free(reply);
-          } else if(mark == 'F') {
-              printf("ToFah\n");
-              arduino_send("F");
-          } else if (mark == 'S') {   // change stand by mode
-              printf("Stand_by mode change\n");
-              arduino_send("S");
-          } else if (mark == 'X'){
-              printf("CIS\n");     // Tell arduino to display "CIS"
-              arduino_send("X");
-          } else {
-              char high_temp[5];
-              char low_temp[5];
-              high_temp[0] = request[5];
-              high_temp[1] = request[6];
-              high_temp[2] = '\0';
-              char* high_signal = malloc(sizeof(char)*6);
-              strcat(high_signal, "H:");
-              strcat(high_signal, high_temp);
-              low_temp[0] = request[8];
-              low_temp[1] = request[9];
-              low_temp[2] = '\0';
-              char* low_signal = malloc(sizeof(char)*6);
-              strcat(low_signal, "L:");
-              strcat(low_signal, low_temp);
-              printf("%s %s\n", high_signal, low_signal);
-
-              arduino_send(high_signal);
-              arduino_send(low_signal);
-              free(high_signal);
-              free(low_signal);
           }
-
-
-//        printf("%s\n", reply);
+          threads[i] = i++;
+          pthread_create(&threads[i], NULL, &recv_request,request);
 
           // 7. close: close the connectionu
           close(fd);
