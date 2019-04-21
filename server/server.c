@@ -15,13 +15,14 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
+#include "arduino.h"
 
 char* msg;
-extern void* arduino_receive(void*);
-extern int arduino_init();
-extern void arduino_send(void*);
-extern int fd;
-extern arduino_status;
+// extern void* arduino_receive(void*);
+// extern int arduino_init();
+// extern void arduino_send(void*);
+// extern int fd;
+// extern arduino_status;
 
 int start_server(int PORT_NUMBER)
 {
@@ -88,9 +89,9 @@ int start_server(int PORT_NUMBER)
           request[bytes_received] = '\0';
           // print it to standard out
           printf("This is the incoming request:\n%s\n", request);
-          
+
           char* reply;
-  
+
           // Process request from client
           char mark = request[5];
           if (mark == 'T') {
@@ -148,7 +149,6 @@ int start_server(int PORT_NUMBER)
 
 
 //        printf("%s\n", reply);
-
 
           // 7. close: close the connectionu
           close(fd);
