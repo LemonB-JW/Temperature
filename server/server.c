@@ -34,10 +34,27 @@ void* recv_request(void* req) {
   printf("This is the incoming request:\n%s\n", request);
 
   char* reply;
-
   // Process request from client
   char mark = request[5];
-  if (mark == 'T') {
+  //send html back
+  if(mark == ' '){
+    FILE * html = fopen("../script/browser.html", "r");
+    //get the file size
+    fseek(html, 0L, SEEK_END);
+    int sz = ftell(html);
+    fseek(html, 0L, SEEK_SET);
+
+    char * reply = malloc(sizeof(char) * (sz + 100));
+    char * starter = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n";
+    strcpy(reply, starter);
+    char * line = malloc(sizeof(char)*200);
+    while (fgets(line, 200, html) != NULL){
+      strcat(reply, line);
+    }
+    send(fd, reply, strlen(reply), 0);
+    free(line);
+    fclose(html);
+  } else if (mark == 'T') {
     // Check if arduino is connected
     if (arduino_status == 1) {
       char* error = "Arduino is currently disconnected!";  //TODO: html or something else

@@ -9,16 +9,20 @@ var lt = 0;
 $(".scale").click(selectScale);
 $("#setThrehold").click(setT);
 $("#update").click(updateCurr);
+$("#standby").click(standby);
+$("#cis").click(showCIS);
+
 
 function updateCurr(){
   //update example.jason to actually request "http://localhost:3001/temp"
-  $.getJSON('http://localhost:3001/T', function(data){
-    curr = data.curr;
-    console.log(curr);
-    // highest = data.highest;
-    // lowest = data.lowest;
-    // average = data.average;
-    updateDisplay()
+  setInterval(function(){
+    $.getJSON('http://localhost:3001/T', function(data){
+      curr = data.curr;
+      highest = data.highest;
+      lowest = data.lowest;
+      average = data.average;
+    updateDisplay();
+  }, 5000);
   })
 }
 
@@ -42,9 +46,9 @@ function sendScale(){
 function updateDisplay(){
   console.log(curr);
   $("#curr").html(curr);
-  // $("#highest").html(highest);
-  // $("#lowest").html(lowest);
-  // $("#average").html(average);
+  $("#highest").html(highest);
+  $("#lowest").html(lowest);
+  $("#average").html(average);
 }
 
 function setT(){
@@ -65,4 +69,16 @@ function setT(){
       $("#message").html("the threshold is " + t);
     })
   }
+}
+
+function standby(){
+  $.get('http://localhost:3001/S', function(){
+    $("#message").html("Standby mode - no update from Arduino");
+  })
+}
+
+function showCIS(){
+  $.get('http://localhost:3001/X', function(){
+    $("#message").html("show CIS on Arduino screen ");
+  })
 }
