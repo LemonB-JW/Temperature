@@ -12,10 +12,15 @@
 #include <time.h>
 #include "temp_calc.h"
 
+extern int isF;
 int fd;
-char* msg;
+extern char* msg;
 double cur_temp;
 pthread_mutex_t fd_lock;
+pthread_mutex_t cur_temp_lock;
+pthread_mutex_t arduino_status_lock;
+extern pthread_mutex_t isF_lock;
+
 int arduino_status;  // 0 if Arduino connected, 1 if disconnected
 /*
 This code configures the file descriptor for use as a serial port.
@@ -53,10 +58,10 @@ double get_cur_temp(char* s) {
     }
     double temp = atof(tmp);
     if (temp != 0) {
-      int status = update_temp(temp);
+      int status = update_temp(&temp, isF);
       if (status != 0) {
         perror("update temperature failed");
-        exit(1);
+        return 1;
       }
       printf("get_temp: %f\n", temp);
       return temp;
@@ -67,6 +72,8 @@ double get_cur_temp(char* s) {
 
 int arduino_init() {
     pthread_mutex_init(&fd_lock, NULL);
+    pthread_mutex_init(&cur_temp_lock, NULL);
+    pthread_mutex_init(&arduino_status_lock, NULL);
     // get the name from the command line
 
     char* filename = "/dev/cu.usbmodem1421";
@@ -80,11 +87,14 @@ int arduino_init() {
 
     if (fd < 0) {
         perror("Could not open file\n");
+        pthread_mutex_lock(&arduino_status_lock);
         arduino_status = 1;   // disconnected
-        // exit(1);
+        pthread_mutex_unlock(&arduino_status_lock);
+        return 1;
     }
     else {
         printf("Successfully opened %s for reading and writing\n", filename);
+        arduino_status = 0;
     }
 
     configure(fd);
@@ -122,14 +132,31 @@ void* arduino_receive(void* arg) {
 
             if (bytes_read <= 0) {
                 // Check if Arduino is Connected
-                if (((double)(clock() - last_time) / CLOCKS_PER_SEC) > 3 && arduino_init() == 0) {
-                    arduino_status = 1;    // Mark disconnected
+                if (((double)(clock() - last_time) / CLOCKS_PER_SEC) > 3) {
+                    while (arduino_init() != 0) {
+                        printf("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\n");
+                        pthread_mutex_lock(&arduino_status_lock);
+                        arduino_status = 1;    // Mark disconnected
+                        pthread_mutex_unlock(&arduino_status_lock);
+
+                        pthread_mutex_lock(&isF_lock);
+                        isF = 0;
+                        pthread_mutex_unlock(&isF_lock);
+                        sleep(1);
+                        // continue;
+                    }
                 } else {
+                    pthread_mutex_lock(&arduino_status_lock);
                     arduino_status = 0;
+                    pthread_mutex_unlock(&arduino_status_lock);
+
                     continue;
                 }
             }
+            pthread_mutex_lock(&arduino_status_lock);
             arduino_status = 0;
+            pthread_mutex_unlock(&arduino_status_lock);
+
             // If we receive message from Arduino successfully, we record the current time
             last_time = clock();
             if (buf == '\n') {
@@ -147,7 +174,15 @@ void* arduino_receive(void* arg) {
         tmp[i] = '\0';
         strcpy(msg, tmp);
         printf("%s\n", msg);
+
+        pthread_mutex_lock(&cur_temp_lock);
         cur_temp = get_cur_temp(msg);  // extract current temperature from the input
+        // if (isF) {
+        //   cur_temp = (cur_temp - 32) * 5 / 9;
+        // }
+        pthread_mutex_unlock(&cur_temp_lock);
+
+        printf("isF %d\n", isF);
     }
     return NULL;
 }

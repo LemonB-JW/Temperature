@@ -24,6 +24,9 @@ struct req_info{
 };
 
 char* msg;
+int isF = 0;
+pthread_mutex_t isF_lock;
+
 // extern void* arduino_receive(void*);
 // extern int arduino_init();
 // extern void arduino_send(void*);
@@ -112,17 +115,25 @@ void* recv_request(void *new_req) {
       char* error = "Arduino is currently disconnected!";  //TODO: html or something else
       reply = malloc(sizeof(char) * (strlen(error) + 1));
       strcpy(reply, error);
-      send(fd, reply, strlen(reply), 0);
+      // send(fd, reply, strlen(reply), 0);
       perror("arduino_status error");
-      exit(1);
+      return NULL;
     }
     // get temperature data
     temperature temps = get_temp();
     printf("Dispay: ");
     char reply_head[200] = "HTTP/1.1 200 OK\nContent-Type: apllication/json\n\n";
     char *reply_tail = malloc(sizeof(char)*100);
-    sprintf(reply_tail, "{\"curr\":%f,\"highest\":%f,\"lowest\":%f,\"average\":%f}", cur_temp, temps.high, temps.low, temps.avg);
-    // strcat(reply_head, msg);
+    if(isF == 1){
+      double temp_cur_temp = cur_temp * 9 / 5 + 32;
+      double temp_high = temps.high * 9 /5 + 32;
+      double temp_low = temps.low * 9 /5 + 32;
+      double temp_avg = temps.avg * 9 /5 + 32;
+      sprintf(reply_tail, "{\"curr\":%f,\"highest\":%f,\"lowest\":%f,\"average\":%f}", temp_cur_temp, temp_high, temp_low, temp_avg);
+      // strcat(reply_head, msg);
+    }else{
+      sprintf(reply_tail, "{\"curr\":%f,\"highest\":%f,\"lowest\":%f,\"average\":%f}", cur_temp, temps.high, temps.low, temps.avg);
+    }
     strcat(reply_head, reply_tail);
     reply = malloc(sizeof(char)*strlen(reply_head) + 1);
     strcpy(reply, reply_head);
@@ -132,6 +143,14 @@ void* recv_request(void *new_req) {
     send(req->fd, reply, strlen(reply), 0);
     free(reply);
   } else if(mark == 'F') {
+    // TODO:
+      pthread_mutex_lock(&isF_lock);
+      if(isF == 0){
+        isF = 1;
+      }else{
+        isF = 0;
+      }
+      pthread_mutex_unlock(&isF_lock);
       printf("ToFah\n");
       arduino_send("F");
   } else if (mark == 'S') {   // change stand by mode
@@ -209,10 +228,12 @@ int start_server(int PORT_NUMBER)
       printf("\nServer configured to listen on port %d\n", PORT_NUMBER);
       fflush(stdout);
 
+      pthread_mutex_init(&isF_lock, NULL);
 
       arduino_init();
       pthread_t arduino;
       pthread_create(&arduino, NULL, &arduino_receive, NULL);
+
 
       int sin_size = sizeof(struct sockaddr_in);
 
@@ -227,7 +248,6 @@ int start_server(int PORT_NUMBER)
               printf("Server got a connection from (%s, %d)\n", inet_ntoa(client_addr.sin_addr),ntohs(client_addr.sin_port));
           struct req_info req;
           req.fd = fd;
-          printf("fd: %d\n", req.fd);
           // buffer to read data into
           char request[1024];
 
@@ -239,13 +259,16 @@ int start_server(int PORT_NUMBER)
           strcpy(req.request, request);
 
           if (i >= 25) {
-            for (int i = 0; i < 25; i++) {
-              pthread_join(threads[i], NULL);
-            }
+            // for (int i = 0; i < 25; i++) {
+            //   pthread_join(threads[i], NULL);
+            // }
+            i = 0;
           }
 
           pthread_create(&threads[i], NULL, &recv_request, &req);
+          printf("thread\n");
           pthread_join(threads[i++], NULL);
+          printf("thread_join\n");
           // 7. close: close the connectionu
           close(fd);
           printf("Server closed connection\n");

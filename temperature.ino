@@ -139,7 +139,7 @@ void loop()
         strtok(buf, ":");
         String temp = strtok(NULL, ":");
         Threshold_L = temp.toInt();
-    } else if (msg.equals("F") || msg.equals("C")) {
+    } else if (msg.equals("F")) {
       // Change temperature display to the opposite one
       isCel = !isCel;
     } else if (msg.equals("S")) {
@@ -193,7 +193,7 @@ void loop()
 
 
 /*************************************************************************
-Function Name :TO_Fah
+Function Name :To_Fah
 Purpose:
   Transfer from Celsius to Fahrenhelt
 **************************************************************************/
