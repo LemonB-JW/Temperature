@@ -22,10 +22,7 @@ void reset(){
 }
 
 
-double update_temp(double* reading, int isF){
-  if(isF == 1){
-    *reading = (*reading - 32) * 5 / 9;
-  }
+double update_temp(double* reading){
   int index = count % 3600;
   temps[index] = *reading;
   count++;

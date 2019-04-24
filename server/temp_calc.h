@@ -5,5 +5,5 @@ typedef struct{
 } temperature;
 
 void reset();
-double update_temp(double* reading, int isF);
+double update_temp(double* reading);
 temperature get_temp();

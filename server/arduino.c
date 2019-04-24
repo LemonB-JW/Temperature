@@ -51,14 +51,17 @@ void configure(int fd) {
 
 
 double get_cur_temp(char* s) {
-    char* tmp;
+    char* tmp = NULL;
+    double temp = 0;
     if (s != NULL && strlen(s) > 15) {  // Temp:26 degrees C
       tmp = strtok(s, ":");
       tmp = strtok(NULL, " ");
     }
-    double temp = atof(tmp);
+    if (tmp != NULL) {
+     temp = atof(tmp);
+    }
     if (temp != 0) {
-      int status = update_temp(&temp, isF);
+      int status = update_temp(&temp);
       if (status != 0) {
         perror("update temperature failed");
         return 1;
@@ -177,9 +180,6 @@ void* arduino_receive(void* arg) {
 
         pthread_mutex_lock(&cur_temp_lock);
         cur_temp = get_cur_temp(msg);  // extract current temperature from the input
-        // if (isF) {
-        //   cur_temp = (cur_temp - 32) * 5 / 9;
-        // }
         pthread_mutex_unlock(&cur_temp_lock);
 
         printf("isF %d\n", isF);

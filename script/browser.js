@@ -1,14 +1,17 @@
-var curr = 0;
-var highest = 0;
-var lowest = 0;
-var average = 0;
+// var curr = 0;
+// var highest = 0;
+// var lowest = 0;
+// var average = 0;
+var curr = "";
+var highest = "";
+var lowest = "";
+var average = "";
 var scale = "c";
 var ht = 0;
 var lt = 0;
 
 $(".scale").click(selectScale);
 $("#setThrehold").click(setT);
-// $("#update").click(updateCurr);
 $("#standby").click(standby);
 $("#cis").click(showCIS);
 
@@ -20,7 +23,16 @@ setInterval(function(){
     highest = data.highest;
     lowest = data.lowest;
     average = data.average;
-  updateDisplay();
+    status = data.status;
+    console.log(data.curr);
+
+    if (status == 1){
+      $("#message").html("Warning - disconnected from Arduino");
+    }
+    else {
+      $("#message").html("Arduino Connected");
+      updateDisplay();
+    }
   })
 }, 5000);
 
@@ -55,11 +67,12 @@ function updateDisplay(){
 
 function setT(){
   if ($("#ht").val() != null){
-    ht = $("#ht").val();
+    ht = parseFloat($("#ht").val());
   }
   if ($("#lt").val() != null){
-    lt = $("#lt").val();
+    lt = parseFloat($("#lt").val());
   }
+
   if (ht < lt){
     $("#message").html("Error:the lower threhold must be smaller than higher threhold");
   }
