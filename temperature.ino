@@ -127,13 +127,21 @@ void loop()
     String msg = Serial.readString();
     char buf[20];
     msg.toCharArray(buf, 20);
-// "H:35"  "L:10"
+// "H:35,L:10"
     if (msg.startsWith("H")) {
-        Serial.println("received Threshold_H");
+        Serial.println(msg);
         strtok(buf, ":");
-        String temp = strtok(NULL, ":");
+        String temp = strtok(NULL, ",");
+                Serial.println(temp);
         Threshold_U = temp.toInt();
+        strtok(NULL, ":");
+        temp = strtok(NULL, ":");
+        Serial.println(temp);
+        Threshold_L = temp.toInt();
+        Serial.println("H: ");
         Serial.println(Threshold_U, DEC);
+        Serial.println("L: ");
+        Serial.println(Threshold_L, DEC);
     } else if (msg.startsWith("L")) {
         Serial.println("received Threshold_L");
         strtok(buf, ":");
@@ -158,11 +166,6 @@ void loop()
 
     /* Calculate temperature */
     Cal_temp (Decimal, Temperature_H, Temperature_L, IsPositive);
-
-    /* Change Celcius to Fah if needed*/
-//    if (!isCel) {
-//      To_Fah(Decimal, Temperature_H);
-//    }
 
     /* Display temperature on the serial monitor.
        Comment out this line if you don't use serial monitor.*/
@@ -190,21 +193,6 @@ void loop()
     delay (1000);        /* Take temperature read every 1 second */
   }
 }
-
-
-/*************************************************************************
-Function Name :To_Fah
-Purpose:
-  Transfer from Celsius to Fahrenhelt
-**************************************************************************/
-// void To_Fah(int & Decimal, byte& High)
-// {
-//  float temp = Decimal/10000.0 + High;
-//  temp = temp * 9.0 / 5.0 + 32.0 + 0.5;
-//  High = (int) temp;
-//  Decimal = (temp - High) * 10000.0;
-// }
-
 
 /***************************************************************************
  Function Name: Cal_temp
@@ -243,6 +231,7 @@ void Dis_7SEG (int Decimal, byte High, byte Low, bool sign)
   byte Digit = 4;                 /* Number of 7-Segment digit */
   byte Number;                    /* Temporary variable hold the number to display */
 
+  /* Change Celcius to Fah if needed*/
   if (!isCel) {
     float temp = Decimal/10000.0 + High;
     temp = temp * 9.0 / 5.0 + 32.0 + 0.5;

@@ -60,6 +60,17 @@ int send_js(char* filename, int fd){
   return 0;
 }
 
+
+void* quit(){
+  char input[50];
+  while(1){
+    scanf("%s", input);
+    if(input[0] == 'q'){
+      exit(1);
+    }
+  }
+}
+
 /* start new thread when new request coming */
 void* recv_request(void *filedescriptor) {
   int fd = *(int*)filedescriptor;
@@ -186,6 +197,7 @@ void* recv_request(void *filedescriptor) {
       char* high_signal = malloc(sizeof(char)*6);
       strcat(high_signal, "H:");
       strcat(high_signal, high_temp);
+      strcat(high_signal, ",");
       low_temp[0] = request[8];
       low_temp[1] = request[9];
       low_temp[2] = '\0';
@@ -193,11 +205,16 @@ void* recv_request(void *filedescriptor) {
       strcat(low_signal, "L:");
       strcat(low_signal, low_temp);
       printf("%s %s\n", high_signal, low_signal);
-
-      arduino_send(high_signal);
-      arduino_send(low_signal);
+      char* threshold = malloc(sizeof(char)*(strlen(high_signal)+strlen(low_signal)+1));
+      strcpy(threshold, high_signal);
+      strcat(threshold, low_signal);
+      // arduino_send(high_signal);
+      // arduino_send(low_signal);
+      arduino_send(threshold);
+      printf("%s\n", threshold);
       free(high_signal);
       free(low_signal);
+      free(threshold);
 
       reply = malloc(sizeof(char)*(strlen(success_reply) + 1));
       strcpy(reply, success_reply);
@@ -309,6 +326,9 @@ int main(int argc, char *argv[])
       printf("\nUsage: %s [port_number]\n", argv[0]);
       exit(-1);
   }
+
+  pthread_t t;
+  pthread_create(&t, NULL, &quit, NULL);
 
   int port_number = atoi(argv[1]);
   if (port_number <= 1024) {
